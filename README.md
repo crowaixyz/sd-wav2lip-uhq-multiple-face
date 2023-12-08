@@ -2,6 +2,11 @@ stable diffusion webui extension, support wav2lip with reference face image in m
 based on [sd-wav2lip-uhq](https://github.com/numz/sd-wav2lip-uhq).
 ![](https://futurelog-1251943639.cos.accelerate.myqcloud.com/img/e3fe84fd-36ab-430f-b10b-81bd39d4046b.png)
 
+- Raw Video: https://futurelog-1251943639.cos.ap-shanghai.myqcloud.com/video/multiple-face-talking.mp4
+- left face talking synthesis: https://futurelog-1251943639.cos.ap-shanghai.myqcloud.com/video/left-face-talking-synthesis.mp4
+- right face talking synthesis: https://futurelog-1251943639.cos.ap-shanghai.myqcloud.com/video/right-face-talking-synthesis.mp4
+
+
 # Raw [sd-wav2lip-uhq](https://github.com/numz/sd-wav2lip-uhq) README.md
 ## 🔉👄 Wav2Lip STUDIO extension for Stable Diffusion WebUI Automatic1111
 
