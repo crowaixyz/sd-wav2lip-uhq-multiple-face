@@ -187,76 +187,77 @@ class Wav2LipUHQ:
             mask = np.zeros_like(original_gray)
 
             # Process each detected face
-            for (i, rect) in enumerate(rects):
-                # Get face coordinates
-                if not self.only_mouth:
-                    shape = predictor(original_gray, dlib.rectangle(*rect))
+            for (i, faces) in enumerate(rects):
+                for face in faces:
+                    # Get face coordinates
+                    if not self.only_mouth:
+                        shape = predictor(original_gray, dlib.rectangle(*face))
+                        shape = face_utils.shape_to_np(shape)
+                        jaw = shape[jstart:jend][1:-1]
+                        nose = shape[nstart:nend][2]
+
+                    # Get mouth coordinates
+                    shape = predictor(image_restored_gray, dlib.rectangle(*face))
                     shape = face_utils.shape_to_np(shape)
-                    jaw = shape[jstart:jend][1:-1]
-                    nose = shape[nstart:nend][2]
 
-                # Get mouth coordinates
-                shape = predictor(image_restored_gray, dlib.rectangle(*rect))
-                shape = face_utils.shape_to_np(shape)
+                    mouth = shape[mstart:mend][:-8]
+                    mouth = np.delete(mouth, [3], axis=0)
+                    if self.mouth_mask_dilatation > 0:
+                        mouth = self.dilate_mouth(mouth, original_gray.shape[0], original_gray.shape[1])
 
-                mouth = shape[mstart:mend][:-8]
-                mouth = np.delete(mouth, [3], axis=0)
-                if self.mouth_mask_dilatation > 0:
-                    mouth = self.dilate_mouth(mouth, original_gray.shape[0], original_gray.shape[1])
-
-                # Create mask for face
-                if not self.only_mouth:
-                    external_shape = np.append(jaw, [nose], axis=0)
-                    external_shape_pts = external_shape.reshape((-1, 1, 2))
-                    mask = cv2.fillPoly(mask, [external_shape_pts], 255)
-                    if self.erode_face_mask > 0:
-                        kernel = np.ones((self.erode_face_mask, self.erode_face_mask), np.uint8)
-                        mask = cv2.erode(mask, kernel, iterations=1)
-                    # Calculate diff between frames and apply threshold
-                    diff = np.abs(original_gray - image_restored_gray)
-                    diff[diff > 10] = 255
-                    diff[diff <= 10] = 0
-                    masked_diff = cv2.bitwise_and(diff, diff, mask=mask)
-                else:
-                    masked_diff = mask
-
-                # Create mask for mouth
-                cv2.fillConvexPoly(masked_diff, mouth, 255)
-
-                # Save mask
-                if self.mask_blur > 0:
-                    blur = self.mask_blur if self.mask_blur % 2 == 1 else self.mask_blur - 1
-                    masked_save = cv2.GaussianBlur(masked_diff, (blur, blur), 0)
-                else:
-                    masked_save = masked_diff
-
-                original = original_frame.copy()
-
-                # Apply restored face to original image with mask attention
-                extended_mask = np.stack([masked_save] * 3, axis=-1)
-                normalized_mask = extended_mask / 255.0
-                dst = image_restored2 * normalized_mask
-                original = original * (1 - normalized_mask) + dst
-                original = original.astype(np.uint8)
-
-                # Save final image
-                cv2.imwrite(final_path + "output_" + f_number + ".png", original)
-
-                if self.debug:
-                    clone = w2l_frame.copy()
+                    # Create mask for face
                     if not self.only_mouth:
-                        for (x, y) in np.concatenate((jaw, mouth, [nose])):
-                            cv2.circle(clone, (x, y), 1, (0, 0, 255), -1)
+                        external_shape = np.append(jaw, [nose], axis=0)
+                        external_shape_pts = external_shape.reshape((-1, 1, 2))
+                        mask = cv2.fillPoly(mask, [external_shape_pts], 255)
+                        if self.erode_face_mask > 0:
+                            kernel = np.ones((self.erode_face_mask, self.erode_face_mask), np.uint8)
+                            mask = cv2.erode(mask, kernel, iterations=1)
+                        # Calculate diff between frames and apply threshold
+                        diff = np.abs(original_gray - image_restored_gray)
+                        diff[diff > 10] = 255
+                        diff[diff <= 10] = 0
+                        masked_diff = cv2.bitwise_and(diff, diff, mask=mask)
                     else:
-                        for (x, y) in mouth:
-                            cv2.circle(clone, (x, y), 1, (0, 0, 255), -1)
-                    if not self.only_mouth:
-                        cv2.imwrite(debug_path + "diff_" + f_number + ".png", diff)
-                    cv2.imwrite(debug_path + "points_" + f_number + ".png", clone)
-                    cv2.imwrite(debug_path + 'mask_' + f_number + '.png', masked_save)
-                    cv2.imwrite(debug_path + 'original_' + f_number + '.png', original_frame)
-                    cv2.imwrite(debug_path + "face_restore_" + f_number + ".png", image_restored2)
-                    cv2.imwrite(debug_path + "dst_" + f_number + ".png", dst)
+                        masked_diff = mask
+
+                    # Create mask for mouth
+                    cv2.fillConvexPoly(masked_diff, mouth, 255)
+
+                    # Save mask
+                    if self.mask_blur > 0:
+                        blur = self.mask_blur if self.mask_blur % 2 == 1 else self.mask_blur - 1
+                        masked_save = cv2.GaussianBlur(masked_diff, (blur, blur), 0)
+                    else:
+                        masked_save = masked_diff
+
+                    original = original_frame.copy()
+
+                    # Apply restored face to original image with mask attention
+                    extended_mask = np.stack([masked_save] * 3, axis=-1)
+                    normalized_mask = extended_mask / 255.0
+                    dst = image_restored2 * normalized_mask
+                    original = original * (1 - normalized_mask) + dst
+                    original = original.astype(np.uint8)
+
+                    # Save final image
+                    cv2.imwrite(final_path + "output_" + f_number + ".png", original)
+
+                    if self.debug:
+                        clone = w2l_frame.copy()
+                        if not self.only_mouth:
+                            for (x, y) in np.concatenate((jaw, mouth, [nose])):
+                                cv2.circle(clone, (x, y), 1, (0, 0, 255), -1)
+                        else:
+                            for (x, y) in mouth:
+                                cv2.circle(clone, (x, y), 1, (0, 0, 255), -1)
+                        if not self.only_mouth:
+                            cv2.imwrite(debug_path + "diff_" + f_number + ".png", diff)
+                        cv2.imwrite(debug_path + "points_" + f_number + ".png", clone)
+                        cv2.imwrite(debug_path + 'mask_' + f_number + '.png', masked_save)
+                        cv2.imwrite(debug_path + 'original_' + f_number + '.png', original_frame)
+                        cv2.imwrite(debug_path + "face_restore_" + f_number + ".png", image_restored2)
+                        cv2.imwrite(debug_path + "dst_" + f_number + ".png", dst)
 
             frame_number += 1
         opts.code_former_weight = original_codeformer_weight

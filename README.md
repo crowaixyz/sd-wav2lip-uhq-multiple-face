@@ -1,4 +1,9 @@
-# 🔉👄 Wav2Lip STUDIO extension for Stable Diffusion WebUI Automatic1111
+stable diffusion webui extension, support wav2lip with reference face image in multiple face scenario.
+based on [sd-wav2lip-uhq](https://github.com/numz/sd-wav2lip-uhq).
+![](https://futurelog-1251943639.cos.accelerate.myqcloud.com/img/e3fe84fd-36ab-430f-b10b-81bd39d4046b.png)
+
+# Raw [sd-wav2lip-uhq](https://github.com/numz/sd-wav2lip-uhq) README.md
+## 🔉👄 Wav2Lip STUDIO extension for Stable Diffusion WebUI Automatic1111
 
 ## <div align="center"><b><a href="README.md">English</a> | <a href="README_CN.md">简体中文</a></b></div>
 

@@ -63,14 +63,22 @@ class FaceAlignment:
         detected_faces = self.face_detector.detect_from_batch(images.copy())
         results = []
 
-        for i, d in enumerate(detected_faces):
-            if len(d) == 0:
+        for i, faces in enumerate(detected_faces):
+            if len(faces) == 0:
                 results.append(None)
                 continue
-            d = d[0]
-            d = np.clip(d, 0, None)
+            # d = d[0]
+            # d = np.clip(d, 0, None)
 
-            x1, y1, x2, y2 = map(int, d[:-1])
-            results.append((x1, y1, x2, y2))
+            # x1, y1, x2, y2 = map(int, d[:-1])
+            # results.append((x1, y1, x2, y2))
+
+            image_results = []
+            for d in faces:
+                d = np.clip(d, 0, None)
+                x1, y1, x2, y2 = map(int, d[:-1])
+                image_results.append((x1, y1, x2, y2))
+
+            results.append(image_results)
 
         return results

@@ -4,7 +4,7 @@ import gradio as gr
 from scripts.wav2lip.w2l import W2l
 from scripts.wav2lip.wav2lip_uhq import Wav2LipUHQ
 from modules.shared import state
-from scripts.bark.tts import TTS
+# from scripts.bark.tts import TTS
 from scripts.faceswap.swap import FaceSwap
 
 speaker_id = "v2/en_speaker_0"
@@ -45,41 +45,44 @@ def on_ui_tabs():
                         video = gr.Video(label="Video", format="mp4",
                                          info="Filepath of video/image that contains faces to use",
                                          file_types=["mp4", "png", "jpg", "jpeg", "avi"])
-                        face_swap_img = gr.Image(label="Face Swap", type="pil")
-                        face_index_slider = gr.Slider(minimum=0, maximum=20, step=1, value=0, label="Face index",
+                        face_swap_img = gr.Image(label="Reference Face", type="filepath", interactive=True)
+                        face_index_slider = gr.Slider(minimum=0, maximum=20, step=1, value=0, label="Face index(Disabled)",
+                                                    interactive=False,
                                                     info="index of face to swap, left face in image is 0")
 
                     with gr.Column():
-                        with gr.Row():
-                            language = gr.Dropdown(
-                                speaker_language, label="Language", info="Select the language to use",
-                                value="English"
-                            )
-                            gender = gr.Dropdown(
-                                speaker_gender, label="Gender", info="Select gender", value="Male"
-                            )
-                        with gr.Row():
-                            speaker = gr.Dropdown(
-                                speaker_list, label="Speaker", info="Select the speaker to use",
-                                value=speaker_list[0]
-                            )
-                            low_vram = gr.Radio(["False", "True"], value="True", label="Low VRAM",
-                                                info="Less than 16GB of VRAM, set True")
-                        with gr.Row():
-                            audio_example = gr.Audio(label="Audio example",
-                                                     value="https://dl.suno-models.io/bark/prompts/prompt_audio/en_speaker_0.mp3")
-                        with gr.Column():
-                            suno_prompt = gr.Textbox(label="Prompt", placeholder="Prompt", lines=5, type="text",info="Don't forget that bark can only generate 14 seconds of audio at a time, so for long text, you need to use [split] to split the text into multiple prompts")
-                            temperature = gr.Slider(label="Generation temperature", minimum=0.01, maximum=1, step=0.01, value=0.7,
-                                                  info="1.0 more diverse, 0.0 more conservative")
-                            silence = gr.Slider(label="Silence", minimum=0, maximum=1, step=0.01, value=0.25, info="Silence after [split] in seconde")
-                            generate_audio = gr.Button("Generate")
-                            audio = gr.Audio(label="Speech", type="filepath")
+                        # with gr.Row():
+                        #     language = gr.Dropdown(
+                        #         speaker_language, label="Language", info="Select the language to use",
+                        #         value="English"
+                        #     )
+                        #     gender = gr.Dropdown(
+                        #         speaker_gender, label="Gender", info="Select gender", value="Male"
+                        #     )
+                        # with gr.Row():
+                        #     speaker = gr.Dropdown(
+                        #         speaker_list, label="Speaker", info="Select the speaker to use",
+                        #         value=speaker_list[0]
+                        #     )
+                        #     low_vram = gr.Radio(["False", "True"], value="True", label="Low VRAM",
+                        #                         info="Less than 16GB of VRAM, set True")
+                        # with gr.Row():
+                        #     audio_example = gr.Audio(label="Audio example",
+                        #                              value="https://dl.suno-models.io/bark/prompts/prompt_audio/en_speaker_0.mp3")
+                        # with gr.Column():
+                        #     suno_prompt = gr.Textbox(label="Prompt", placeholder="Prompt", lines=5, type="text",info="Don't forget that bark can only generate 14 seconds of audio at a time, so for long text, you need to use [split] to split the text into multiple prompts")
+                        #     temperature = gr.Slider(label="Generation temperature", minimum=0.01, maximum=1, step=0.01, value=0.7,
+                        #                           info="1.0 more diverse, 0.0 more conservative")
+                        #     silence = gr.Slider(label="Silence", minimum=0, maximum=1, step=0.01, value=0.25, info="Silence after [split] in seconde")
+                        #     generate_audio = gr.Button("Generate")
+                        #     audio = gr.Audio(label="Speech", type="filepath")
 
-                        # if language changed, update speaker list
-                        language.change(update_speaker_list, [language, gender], [speaker, audio_example])
-                        gender.change(update_speaker_list, [language, gender], [speaker, audio_example])
-                        speaker.change(select_speaker, speaker, audio_example)
+                        # # if language changed, update speaker list
+                        # language.change(update_speaker_list, [language, gender], [speaker, audio_example])
+                        # gender.change(update_speaker_list, [language, gender], [speaker, audio_example])
+                        # speaker.change(select_speaker, speaker, audio_example)
+
+                        audio = gr.Audio(label="Speech", type="filepath")
 
                 with gr.Row():
                     checkpoint = gr.Radio(["wav2lip", "wav2lip_gan"], value="wav2lip_gan", label="Checkpoint",
@@ -124,23 +127,23 @@ def on_ui_tabs():
                         restore_video = gr.Video(label="Restored face video", format="mp4")
                         result = gr.Video(label="Generated video", format="mp4")
                 generate_btn = gr.Button("Generate")
-                interrupt_btn = gr.Button('Interrupt', elem_id=f"interrupt", visible=True)
-                resume_btn = gr.Button('Resume', elem_id=f"resume", visible=True)
+                # interrupt_btn = gr.Button('Interrupt', elem_id=f"interrupt", visible=True)
+                # resume_btn = gr.Button('Resume', elem_id=f"resume", visible=True)
 
         def on_interrupt():
             state.interrupt()
             return "Interrupted"
 
-        def gen_audio(suno_prompt, temperature, silence, low_vram):
-            global speaker_id
-            if suno_prompt is None or speaker_id is None:
-                return
-            tts = TTS(suno_prompt, speaker_id, temperature, silence,None, low_vram)
-            wav = tts.generate()
-            # delete tts object to free memory
-            del tts
+        # def gen_audio(suno_prompt, temperature, silence, low_vram):
+        #     global speaker_id
+        #     if suno_prompt is None or speaker_id is None:
+        #         return
+        #     tts = TTS(suno_prompt, speaker_id, temperature, silence,None, low_vram)
+        #     wav = tts.generate()
+        #     # delete tts object to free memory
+        #     del tts
 
-            return wav
+        #     return wav
 
         def generate(video, face_swap_img, face_index, audio, checkpoint, face_restore_model, no_smooth, only_mouth, resize_factor,
                      mouth_mask_dilatation, erode_face_mask, mask_blur, pad_top, pad_bottom, pad_left, pad_right,
@@ -151,9 +154,9 @@ def on_ui_tabs():
                 print("[ERROR] Please select a video and an audio file")
                 return
 
-            if face_swap_img is not None:
-                face_swap = FaceSwap(video, audio, face_index, face_swap_img, resize_factor, face_restore_model, code_former_weight)
-                video = face_swap.generate()
+            # if face_swap_img is not None:
+            #     face_swap = FaceSwap(video, audio, face_index, face_swap_img, resize_factor, face_restore_model, code_former_weight)
+            #     video = face_swap.generate()
 
             w2l = W2l(video, audio, checkpoint, no_smooth, resize_factor, pad_top, pad_bottom, pad_left,
                       pad_right, face_swap_img)
@@ -175,10 +178,10 @@ def on_ui_tabs():
 
             return w2luhq.execute(True)
 
-        generate_audio.click(
-            gen_audio,
-            [suno_prompt, temperature, silence, low_vram],
-            audio)
+        # generate_audio.click(
+        #     gen_audio,
+        #     [suno_prompt, temperature, silence, low_vram],
+        #     audio)
 
         generate_btn.click(
             generate,
@@ -186,12 +189,12 @@ def on_ui_tabs():
              erode_face_mask, mask_blur, pad_top, pad_bottom, pad_left, pad_right, active_debug, code_former_weight],
             [faceswap_video, wav2lip_video, restore_video, result])
 
-        resume_btn.click(
-            resume,
-            [video,face_swap_img, face_restore_model, only_mouth, resize_factor, mouth_mask_dilatation, erode_face_mask,
-             mask_blur, active_debug, code_former_weight],
-            [faceswap_video, wav2lip_video, restore_video, result])
+        # resume_btn.click(
+        #     resume,
+        #     [video,face_swap_img, face_restore_model, only_mouth, resize_factor, mouth_mask_dilatation, erode_face_mask,
+        #      mask_blur, active_debug, code_former_weight],
+        #     [faceswap_video, wav2lip_video, restore_video, result])
 
-        interrupt_btn.click(on_interrupt)
+        # interrupt_btn.click(on_interrupt)
 
     return [(wav2lip_uhq_interface, "Wav2lip Studio", "wav2lip_uhq_interface")]

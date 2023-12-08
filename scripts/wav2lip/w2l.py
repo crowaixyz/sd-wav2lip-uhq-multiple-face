@@ -7,6 +7,7 @@ import torch, scripts.wav2lip.face_detection as face_detection
 from scripts.wav2lip.models import Wav2Lip
 import modules.shared as shared
 from pkg_resources import resource_filename
+import face_recognition
 
 
 class W2l:
@@ -62,7 +63,61 @@ class W2l:
             boxes[i] = np.mean(window, axis=0)
         return boxes
 
+    # def face_detect(self, images):
+    #     detector = face_detection.FaceAlignment(face_detection.LandmarksType._2D,
+    #                                             flip_input=False, device=self.device)
+
+    #     batch_size = self.face_det_batch_size
+
+    #     while 1:
+    #         predictions = []
+    #         try:
+    #             for i in tqdm(range(0, len(images), batch_size)):
+    #                 predictions.extend(detector.get_detections_for_batch(np.array(images[i:i + batch_size])))
+    #         except RuntimeError:
+    #             if batch_size == 1:
+    #                 raise RuntimeError(
+    #                     'Image too big to run face detection on GPU. Please use the --resize_factor argument')
+    #             batch_size //= 2
+    #             print('Recovering from OOM error; New batch size: {}'.format(batch_size))
+    #             continue
+    #         break
+
+    #     results = []
+    #     pady1, pady2, padx1, padx2 = self.pads
+    #     n = 0
+    #     for rect, image in zip(predictions, images):
+    #         if rect is None:
+    #             print("Hum : " + str(n))
+    #             cv2.imwrite(self.wav2lip_folder + '/temp/faulty_frame.jpg',
+    #                         image)  # check this frame where the face was not detected.
+    #             raise ValueError('Face not detected! Ensure the video contains a face in all the frames.')
+
+    #             # Add the original frame without face to results, reference: https://github.com/Rudrabha/Wav2Lip/issues/532
+    #             # results.append([image, []])  -- ignore no face in frame errors
+    #             # continue
+
+    #         y1 = max(0, rect[1] - pady1)
+    #         y2 = min(image.shape[0], rect[3] + pady2)
+    #         x1 = max(0, rect[0] - padx1)
+    #         x2 = min(image.shape[1], rect[2] + padx2)
+
+    #         results.append([x1, y1, x2, y2])
+    #         n += 1
+
+    #     boxes = np.array(results)
+    #     if not self.nosmooth: boxes = self.get_smoothened_boxes(boxes, T=5)
+    #     results = [[image[y1: y2, x1:x2], (y1, y2, x1, x2)] for image, (x1, y1, x2, y2) in zip(images, boxes)]
+
+    #     del detector
+    #     return results
+
+    # modified face_detect function to use a reference image
     def face_detect(self, images):
+        # Load the reference face image
+        reference_image = face_recognition.load_image_file(self.face_swap_img)
+        reference_face_encoding = face_recognition.face_encodings(reference_image)[0]
+
         detector = face_detection.FaceAlignment(face_detection.LandmarksType._2D,
                                                 flip_input=False, device=self.device)
 
@@ -85,19 +140,36 @@ class W2l:
         results = []
         pady1, pady2, padx1, padx2 = self.pads
         n = 0
-        for rect, image in zip(predictions, images):
-            if rect is None:
+        for rects, image in zip(predictions, images):
+            if rects is None:
                 print("Hum : " + str(n))
                 cv2.imwrite(self.wav2lip_folder + '/temp/faulty_frame.jpg',
                             image)  # check this frame where the face was not detected.
                 raise ValueError('Face not detected! Ensure the video contains a face in all the frames.')
+                continue
 
-            y1 = max(0, rect[1] - pady1)
-            y2 = min(image.shape[0], rect[3] + pady2)
-            x1 = max(0, rect[0] - padx1)
-            x2 = min(image.shape[1], rect[2] + padx2)
+            for rect in rects:
+                y1 = max(0, rect[1] - pady1)
+                y2 = min(image.shape[0], rect[3] + pady2)
+                x1 = max(0, rect[0] - padx1)
+                x2 = min(image.shape[1], rect[2] + padx2)
 
-            results.append([x1, y1, x2, y2])
+                # Get the face encodings for the current face
+                # current_face = image[y1: y2, x1:x2]
+                #current_face_encoding = face_recognition.face_encodings(current_face)
+                current_face = cv2.cvtColor(image[y1: y2, x1:x2], cv2.COLOR_BGR2RGB)
+                current_face_encodings = face_recognition.face_encodings(current_face)
+                if len(current_face_encodings) > 0:
+                    current_face_encoding = current_face_encodings[0]
+                else:
+                    print("No face detected in the image.")
+                    continue
+                # Compare the face encodings
+                match = face_recognition.compare_faces([reference_face_encoding], current_face_encoding)
+
+                if match[0]:
+                    results.append([x1, y1, x2, y2])
+
             n += 1
 
         boxes = np.array(results)
@@ -126,6 +198,14 @@ class W2l:
             face, coords = face_det_results[idx].copy()
 
             face = cv2.resize(face, (self.img_size, self.img_size))
+
+            # if len(coords) == 0: # Check if there are no face coordinates
+            #     # Add a random matrix of shape (96x96x3) to img_batch and an empty list to coords_batch
+            #     face = np.random.rand(self.img_size, self.img_size, 3) * 255
+            #     coords_batch.append([])
+            # else:
+            #     face = cv2.resize(face, (self.img_size, self.img_size))
+            #     coords_batch.append(coords)
 
             img_batch.append(face)
             mel_batch.append(m)
